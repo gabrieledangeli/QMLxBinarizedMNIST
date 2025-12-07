@@ -1,14 +1,16 @@
 # QML Challenge – Task 2: Binarized MNIST Evaluation
 
-This repository implements **Task 2** of the ZHAW / UZH Quantum Machine Learning Challenge. It evaluates and compares a classical neural network against a hybrid quantum-classical model on the **Binarized MNIST** dataset.
+This repository implements **Task 2** of the ZHAW / UZH Quantum Machine Learning Challenge. It evaluates and compares classical and quantum machine learning approaches on the **Binarized MNIST** dataset.
+
+The implementation is inspired by the paper **"Hybrid quantum neural networks show strongly reduced need for free parameters in entity matching" (Scientific Reports, 2025)**, adapting the architectures to the Binarized MNIST classification task (digits 0 vs 1).
 
 ## Goal
 
 The goal is to:
-1.  Implement a classical baseline (MLP).
-2.  Implement a quantum/hybrid model using **PennyLane**.
-3.  Train both on a subset of MNIST (e.g., digits 0 vs 1).
-4.  Compare their performance in terms of **Test Accuracy**.
+1.  Implement a **Classical Baseline (MLP)**.
+2.  Implement a **Quantum Neural Network (QNN)** with minimal parameters.
+3.  Implement a **Hybrid Quantum Neural Network (HQNN)** with trainable classical embedding.
+4.  Compare their performance in terms of **Test Accuracy** and **Number of Parameters**.
 
 ## Project Structure
 
@@ -16,14 +18,15 @@ The goal is to:
 .
   src/
     config.py           # Hyperparameters and configuration
-    data.py             # Data loading and preprocessing (PCA for quantum)
+    data.py             # Data loading (PennyLane datasets) and preprocessing
     classical_models.py # PyTorch MLP implementation
-    quantum_models.py   # PennyLane hybrid quantum model
+    quantum_models.py   # PennyLane QNN and HQNN implementations
     train_classical.py  # Training script for classical model
-    train_quantum.py    # Training script for quantum model
-    compare_models.py   # Runs both and compares results
+    train_quantum.py    # Training script for quantum models (QNN/HQNN)
+    compare_models.py   # Runs all experiments and generates comparison plots
   scripts/
     download_data.py    # Helper to download data
+  results/              # Output folder for plots and tables
 ```
 
 ## Installation
@@ -46,46 +49,62 @@ The goal is to:
 
 Run the experiments from the root directory of the project.
 
-1.  **Train Classical Model:**
+### 1. Run Full Comparison (Recommended)
+This script trains all three models (MLP, QNN, HQNN), saves the results, and generates comparison plots.
+```bash
+python -m src.compare_models
+```
+**Outputs in `results/`:**
+*   `comparison_table.csv`: Table with accuracy and parameter counts.
+*   `comparison_results.png`: Bar chart comparing test accuracy.
+*   `loss_comparison.png`: Training and validation loss curves.
+
+### 2. Train Individual Models
+You can also train models individually:
+
+*   **Classical MLP:**
     ```bash
     python -m src.train_classical
     ```
 
-2.  **Train Quantum Model:**
+*   **Quantum Neural Network (QNN):**
     ```bash
-    python -m src.train_quantum
+    python -m src.train_quantum --model_type qnn
     ```
 
-3.  **Run Comparison:**
+*   **Hybrid Quantum Neural Network (HQNN):**
     ```bash
-    python -m src.compare_models
+    python -m src.train_quantum --model_type hqnn
     ```
-    This will run both training loops and generate a comparison table and a plot `comparison_results.png`.
 
-## Models
+## Models Implemented
 
-### Classical Model
-*   **Type:** Multi-Layer Perceptron (MLP)
+### 1. Classical MLP (Baseline)
 *   **Architecture:** Input (784) -> Linear(64) -> ReLU -> Linear(32) -> ReLU -> Linear(2)
-*   **Input:** Flattened 28x28 images (784 dimensions).
+*   **Parameters:** ~52k
+*   **Input:** Flattened 28x28 images.
 
-### Quantum Model
-*   **Type:** Hybrid Quantum-Classical Classifier
-*   **Preprocessing:** PCA is used to reduce the 784 dimensions to `N_QUBITS` (default: 4) features.
-*   **Encoding:** `AngleEmbedding` encodes the PCA features into rotation angles.
-*   **Ansatz:** `BasicEntanglerLayers` provides variational parameters.
-*   **Measurement:** Expectation value of Pauli-Z on each qubit.
-*   **Post-processing:** A classical linear layer maps the quantum output to class logits.
+### 2. Quantum Neural Network (QNN)
+*   **Inspiration:** "Quantum neural network (QNN)" section of the paper.
+*   **Preprocessing:** PCA reduces input to `N_QUBITS` (4) features.
+*   **Encoding:** `ZZFeatureMap`-like encoding (Hadamard + RZ + ZZ interactions).
+*   **Ansatz:** `RealAmplitudes`-like ansatz with linear entanglement (RY rotations + CNOT chain).
+*   **Parameters:** Very few (e.g., ~42 parameters for 4 qubits, 2 layers).
+*   **Goal:** Demonstrate learning capability with minimal parameters.
 
-## Results
+### 3. Hybrid Quantum Neural Network (HQNN)
+*   **Inspiration:** "Hybrid quantum neural network (HQNN)" section of the paper.
+*   **Architecture:** Trainable Classical Embedding -> Quantum Circuit -> Linear Output.
+*   **Embedding:** Maps 784 inputs to `N_QUBITS` features (learned end-to-end).
+*   **Quantum Circuit:** `QAOAEmbedding` + `StronglyEntanglingLayers`.
+*   **Parameters:** ~50k (dominated by the classical embedding).
+*   **Goal:** Combine classical feature extraction with quantum processing.
 
-*   **Classical Accuracy:** ~99% (on 0 vs 1 task)
-*   **Quantum Accuracy:** ~95-99% (depending on PCA quality and epochs)
+## Results & Observations
 
-### Observations
-*   The classical model trains very quickly and achieves high accuracy on the full feature set.
-*   The quantum model requires dimensionality reduction (PCA) to fit the data onto a small number of qubits (4). Despite this massive loss of information (784 -> 4 features), the quantum model performs surprisingly well, demonstrating the power of hybrid approaches on compressed data.
-*   **Challenges:** Simulation time increases exponentially with qubits. Using `pennylane-lightning` helps, but keeping qubit count low is essential for rapid experimentation.
+*   **Classical MLP:** Achieves high accuracy (~99.8%) with fast training.
+*   **QNN:** Achieves surprisingly high accuracy (~99.5%) despite having **3 orders of magnitude fewer parameters** (tens vs thousands). This confirms the paper's finding regarding the parameter efficiency of quantum models.
+*   **HQNN:** Performs well (~98%), leveraging the trainable embedding to adapt the high-dimensional input to the quantum circuit.
 
 ## License
 MIT
