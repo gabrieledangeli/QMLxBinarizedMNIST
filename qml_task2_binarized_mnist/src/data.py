@@ -1,14 +1,14 @@
 import numpy as np
 import torch
-from sklearn.datasets import fetch_openml
-from sklearn.model_selection import train_test_split
+import pennylane as qml
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
 from . import config
 
 def load_binarized_mnist(n_qubits=None, use_pca=False):
     """
-    Loads MNIST data, filters for two classes, and optionally applies PCA.
+    Loads Binarized MNIST data from PennyLane datasets, filters for two classes, 
+    and optionally applies PCA.
     
     Args:
         n_qubits (int): Number of components for PCA (if use_pca is True).
@@ -17,26 +17,39 @@ def load_binarized_mnist(n_qubits=None, use_pca=False):
     Returns:
         tuple: (x_train, y_train, x_test, y_test) as Torch tensors.
     """
-    print("Loading MNIST dataset...")
-    # Fetch MNIST data
-    mnist = fetch_openml('mnist_784', version=1, as_frame=False, parser='auto')
-    X = mnist.data
-    y = mnist.target.astype(int)
+    print("Loading Binarized MNIST dataset from PennyLane...")
+    
+    try:
+        # Load dataset from PennyLane
+        # This returns a list of datasets, we take the first one
+        datasets = qml.data.load("other", name="binarized-mnist")
+        ds = datasets[0]
+        
+        X_train_full = ds.train['inputs']
+        y_train_full = ds.train['labels']
+        X_test_full = ds.test['inputs']
+        y_test_full = ds.test['labels']
+        
+    except Exception as e:
+        print(f"Error loading dataset from PennyLane: {e}")
+        raise e
 
-    # Filter for specific classes (binary classification)
-    mask = np.isin(y, config.CLASSES)
-    X = X[mask]
-    y = y[mask]
+    # Helper to filter and process data
+    def filter_data(X, y):
+        # Filter for specific classes (binary classification)
+        mask = np.isin(y, config.CLASSES)
+        X_filtered = X[mask]
+        y_filtered = y[mask]
+        
+        # Remap labels to 0 and 1
+        y_filtered = np.where(y_filtered == config.CLASSES[0], 0, 1)
+        return X_filtered, y_filtered
 
-    # Remap labels to 0 and 1
-    y = np.where(y == config.CLASSES[0], 0, 1)
-
-    # Split into train and test
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.2, random_state=config.SEED, stratify=y
-    )
+    X_train, y_train = filter_data(X_train_full, y_train_full)
+    X_test, y_test = filter_data(X_test_full, y_test_full)
 
     # Normalize data (StandardScaler)
+    # Even though data is binary, scaling helps PCA and training
     scaler = StandardScaler()
     X_train = scaler.fit_transform(X_train)
     X_test = scaler.transform(X_test)
