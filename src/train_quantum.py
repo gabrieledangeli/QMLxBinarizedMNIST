@@ -36,6 +36,13 @@ def train_model(model_type="qnn"):
     # Scheduler: ReduceLROnPlateau
     scheduler = ReduceLROnPlateau(optimizer, mode='max', factor=0.5, patience=2)
 
+    history = {
+        'train_loss': [],
+        'train_acc': [],
+        'val_loss': [],
+        'val_acc': []
+    }
+
     print(f"Starting {model_type.upper()} Training...")
     for epoch in range(config.EPOCHS_QUANTUM):
         model.train()
@@ -58,37 +65,38 @@ def train_model(model_type="qnn"):
             
             pbar.set_postfix({'loss': running_loss/total, 'acc': correct/total})
 
+        epoch_loss = running_loss / len(train_loader)
+        epoch_acc = correct / total
+        history['train_loss'].append(epoch_loss)
+        history['train_acc'].append(epoch_acc)
+
         # Validation (using test set for simplicity here, ideally split val)
         model.eval()
+        val_running_loss = 0.0
         val_correct = 0
         val_total = 0
         with torch.no_grad():
             for inputs, labels in test_loader:
                 outputs = model(inputs)
+                loss = criterion(outputs, labels)
+                val_running_loss += loss.item()
                 _, predicted = torch.max(outputs.data, 1)
                 val_total += labels.size(0)
                 val_correct += (predicted == labels).sum().item()
         
+        val_loss = val_running_loss / len(test_loader)
         val_acc = val_correct / val_total
+        history['val_loss'].append(val_loss)
+        history['val_acc'].append(val_acc)
+
         print(f"Epoch {epoch+1} - Test Acc: {val_acc:.4f}")
         
         # Step scheduler
         scheduler.step(val_acc)
 
-    # Final Evaluation
-    model.eval()
-    correct = 0
-    total = 0
-    with torch.no_grad():
-        for inputs, labels in test_loader:
-            outputs = model(inputs)
-            _, predicted = torch.max(outputs.data, 1)
-            total += labels.size(0)
-            correct += (predicted == labels).sum().item()
-
-    accuracy = correct / total
+    accuracy = history['val_acc'][-1]
     print(f"{model_type.upper()} Model Final Test Accuracy: {accuracy:.4f}")
-    return accuracy, model
+    return accuracy, model, history
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
