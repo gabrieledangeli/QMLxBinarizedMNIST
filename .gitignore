@@ -17,7 +17,7 @@ env/
 *.jpeg
 checkpoints/
 results/
-qml_task2_binarized_mnist/comparison_results.png
+comparison_results.png
 
 # OS generated files
 .DS_Store
