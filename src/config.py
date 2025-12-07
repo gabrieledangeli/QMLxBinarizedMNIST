@@ -17,3 +17,8 @@ EPOCHS_QUANTUM = 5
 # Quantum Configuration
 N_QUBITS = 4      # Number of qubits
 N_LAYERS = 2      # Number of layers in the quantum circuit
+
+# QNN/HQNN Specific Configuration
+QNN_LAYERS = 2    # Layers for QNN (RealAmplitudes)
+HQNN_LAYERS = 2   # Layers for HQNN (StronglyEntanglingLayers)
+QUANTUM_LR = 0.01 # Learning rate for quantum models
