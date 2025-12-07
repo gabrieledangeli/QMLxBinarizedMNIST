@@ -22,3 +22,6 @@ qml_task2_binarized_mnist/comparison_results.png
 # OS generated files
 .DS_Store
 Thumbs.db
+
+# Data files
+datasets/
