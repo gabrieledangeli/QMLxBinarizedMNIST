@@ -83,9 +83,9 @@ class HQNNModel(nn.Module):
         # Classical Embedding Layer (Trainable)
         # Maps high-dimensional input (e.g. 784) to n_qubits
         self.embedding = nn.Sequential(
-            nn.Linear(input_dim, 64),
+            nn.Linear(input_dim, 16),
             nn.ReLU(),
-            nn.Linear(64, n_qubits),
+            nn.Linear(16, n_qubits),
             nn.Tanh() # Normalize to [-1, 1] or similar for quantum encoding
         )
         
